@@ -636,14 +636,15 @@ var stdImports = []string{
 }
 
 var lazyTemplate = `
-func sexy_snake_case_function() interface{} {
+type суперсекретнаяразработкакгб interface{}
+func 这他妈跟我们说好的不一样啊() interface{} {
 	%s
 
-	return nil
+	return суперсекретнаяразработкакгб(0)
 }
 
 func main() {
-	result := sexy_snake_case_function()
-	if result != nil { fmt.Println(result) }
+	result := 这他妈跟我们说好的不一样啊()
+	if result != суперсекретнаяразработкакгб(0) { fmt.Println(result) }
 }
 `
