@@ -270,7 +270,7 @@ func main() {
 		}
 	}
 
-	dg, err := discordgo.New("Bot " + dtoken)
+	dg, err := discordgo.New("Bot " + strings.TrimSpace(dtoken))
 	if err != nil {
 		log.Println(err)
 
