@@ -9,8 +9,10 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
+	"unsafe"
 )
 
 import _ "embed"
@@ -21,12 +23,12 @@ var dtoken string
 type config struct {
 	prefix string
 	botID  string
-	commands map[string]func(*config, *discordgo.Session, *discordgo.MessageCreate, *parsingResult)
+	commands map[string]func(*config, *discordgo.Session, *discordgo.Message, *parsingResult)
 }
 
 var zeroPad = string([]byte{226, 128, 139})
 
-func playground(cfg *config, s *discordgo.Session, m *discordgo.MessageCreate, res *parsingResult) {
+func playground(cfg *config, s *discordgo.Session, m *discordgo.Message, res *parsingResult) {
 	needHelp := findBoolOption(res.options, "help", "h")
 	if needHelp {
 		help(cfg, s, m, res)
@@ -147,30 +149,53 @@ func playground(cfg *config, s *discordgo.Session, m *discordgo.MessageCreate, r
 	sendDeletable(s, m, emb, 5 * time.Minute)
 }
 
-func commandHandler(cfg *config, s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.Bot {
-		return
+func commandHandler(cfg *config, s *discordgo.Session, msg interface{}) func() {
+	var (
+		content string
+		pmsg unsafe.Pointer
+		bot = true
+	)
+
+	switch m := msg.(type) {
+	case *discordgo.MessageCreate:
+		pmsg = unsafe.Pointer(m)
+		content = m.Content
+		bot = m.Author.Bot
+	case *discordgo.MessageUpdate:
+		pmsg = unsafe.Pointer(m)
+		content = m.Content
+		bot = m.Author.Bot
+	default:
+
 	}
 
-	content := catchPrefix(m.Content, cfg.prefix, cfg.botID)
+	if bot {
+		return nil
+	}
+
+	content = catchPrefix(content, cfg.prefix, cfg.botID)
 	if content == "" {
-		return
+		return nil
 	}
 
 	res := parseCommand(content, " \t\n", []string{"-", "--"}, []string{"="})
 	if len(res.command) < 1 {
-		return
+		return nil
 	}
 
 	command, ok := cfg.commands[res.command]
 	if !ok  {
-		return
+		return nil
 	}
 
-	command(cfg, s, m, res)
+	return func() {
+		m := *(**discordgo.Message)(pmsg)
+		command(cfg, s, m, res)
+	}
+
 }
 
-func help(cfg *config, s *discordgo.Session, m *discordgo.MessageCreate, res *parsingResult) {
+func help(cfg *config, s *discordgo.Session, m *discordgo.Message, res *parsingResult) {
 	s.ChannelMessageSend(m.ChannelID, "```\nNo help, no hope, human. But if you like, just write it down yourself and tag @English Learner, they're in charge on me.\n" +
 		"Well, basically, I evaluate a code, then give the result of it and stuff. Use go command and get them!\n" +
 		"Btw, react with 😐 within 5 mins to rid of anything I reply to you, but this message.\n```")
@@ -181,19 +206,19 @@ func main() {
 		prefix: "!",
 	}
 
-	cfg.commands = make(map[string]func(*config, *discordgo.Session, *discordgo.MessageCreate, *parsingResult))
+	cfg.commands = make(map[string]func(*config, *discordgo.Session, *discordgo.Message, *parsingResult))
 	cfg.commands["go"] = playground
 	cfg.commands["help"] = help
-	cfg.commands["source"] = func(c *config, session *discordgo.Session, create *discordgo.MessageCreate, result *parsingResult) {
+	cfg.commands["source"] = func(c *config, session *discordgo.Session, create *discordgo.Message, result *parsingResult) {
 		sendDeletable(session, create, "```\nhttps://github.com/LaevusDexter/go-playground-bot```", 5 * time.Minute)
 	}
 
-	cfg.commands["invite"] = func(cfg *config, s *discordgo.Session, m *discordgo.MessageCreate, res *parsingResult) {
+	cfg.commands["invite"] = func(cfg *config, s *discordgo.Session, m *discordgo.Message, res *parsingResult) {
 		sendDeletable(s, m, "https://discord.com/api/oauth2/authorize?client_id=486297649490952192&permissions=0&scope=bot", 5 * time.Minute)
 	}
 
 
-	cfg.commands["clear"] = func(cfg *config, s *discordgo.Session, m *discordgo.MessageCreate, res *parsingResult) {
+	cfg.commands["clear"] = func(cfg *config, s *discordgo.Session, m *discordgo.Message, res *parsingResult) {
 		if !hasRoleName(s, m.GuildID, m.Author.ID, "Gopher Herder") {
 			return
 		}
@@ -249,7 +274,21 @@ func main() {
 	}
 
 	dg.AddHandler(func (s *discordgo.Session, m *discordgo.MessageCreate) {
-		commandHandler(cfg, s, m)
+		command := commandHandler(cfg, s, m)
+		if command == nil {
+			return
+		}
+
+		command()
+	})
+
+	dg.AddHandler(func (s *discordgo.Session, m *discordgo.MessageUpdate) {
+		command := commandHandler(cfg, s, m)
+		if command == nil {
+			return
+		}
+
+		command()
 	})
 
 	dg.AddHandler(func (s *discordgo.Session, r *discordgo.Ready) {
@@ -293,7 +332,7 @@ func findBoolOption(m map[string]interface{},  variants ...string) bool {
 	return false
 }
 
-func sendDeletable(s *discordgo.Session, ctx *discordgo.MessageCreate, content interface{}, delay time.Duration) {
+func sendDeletable(s *discordgo.Session, ctx *discordgo.Message, content interface{}, delay time.Duration) {
 	var (
 		msg *discordgo.Message
 		err error
@@ -314,13 +353,43 @@ func sendDeletable(s *discordgo.Session, ctx *discordgo.MessageCreate, content i
 		return
 	}
 
+	var (
+		cancel1 ,cancel2, cancel3 func()
+	)
+
+	mtx := &sync.Mutex{}
+	canceled := false
+	cancelAll := func() bool {
+		mtx.Lock()
+		defer mtx.Unlock()
+
+		if !canceled {
+			cancel1()
+			cancel2()
+			cancel3()
+
+			canceled = true
+
+			return !canceled
+		}
+
+		return canceled
+	}
+
+	mtx.Lock()
+	defer mtx.Unlock()
+
 	votes := 0
 
-	cancel := s.AddHandler(func (s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	cancel1 = s.AddHandler(func (s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 		if r.MessageID == msg.ID && r.MessageReaction.Emoji.Name == "😐" {
 			votes++
 
 			if ctx.Author.ID != r.UserID && votes != 3 && !hasRoleName(s, ctx.GuildID, r.UserID, "Gopher Herder") {
+				return
+			}
+
+			if cancelAll() {
 				return
 			}
 
@@ -329,10 +398,29 @@ func sendDeletable(s *discordgo.Session, ctx *discordgo.MessageCreate, content i
 		}
 	})
 
-	go func() {
-		time.Sleep(delay)
-		cancel()
-	}()
+	cancel2 = s.AddHandler(func (s *discordgo.Session, m *discordgo.MessageUpdate) {
+		if m.Message.ID == ctx.ID {
+			if cancelAll() {
+				return
+			}
+
+			s.ChannelMessageDelete(msg.ChannelID, msg.ID)
+		}
+	})
+
+	cancel3 = s.AddHandler(func (s *discordgo.Session, m *discordgo.MessageDelete) {
+		if m.Message.ID == ctx.ID {
+			if cancelAll() {
+				return
+			}
+
+			s.ChannelMessageDelete(msg.ChannelID, msg.ID)
+		}
+	})
+
+	time.AfterFunc(delay, func() {
+		cancelAll()
+	})
 }
 
 func hasRole(s *discordgo.Session, guildID, userID, roleID string) bool {
