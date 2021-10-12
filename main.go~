@@ -164,11 +164,7 @@ func commandHandler(cfg *config, s *discordgo.Session, msg interface{}) func() {
 	case *discordgo.MessageUpdate:
 		pmsg = unsafe.Pointer(m)
 		content = m.Content
-		if m.Author != nil {
-			bot = m.Author.Bot
-		} else {
-			bot = false
-		}
+		bot = m.Author.Bot
 	default:
 
 	}
