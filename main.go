@@ -196,9 +196,9 @@ func commandHandler(cfg *config, s *discordgo.Session, msg interface{}) func() {
 }
 
 func help(cfg *config, s *discordgo.Session, m *discordgo.Message, res *parsingResult) {
-	s.ChannelMessageSend(m.ChannelID, "```\nNo help, no hope, human. But if you like, just write it down yourself and tag @English Learner, they're in charge on me.\n" +
+	sendDeletable(s, m, "```\nNo help, no hope, human. But if you like, just write it down yourself and tag @English Learner, they're in charge on me.\n" +
 		"Well, basically, I evaluate a code, then give the result of it and stuff. Use go command and get them!\n" +
-		"Btw, react with 😐 within 5 mins to rid of anything I reply to you, but this message.\n```")
+		"Btw, react with 😐 within 5 mins to rid of anything I reply to you.\n```", 5 * time.Minute)
 }
 
 func main() {
@@ -225,7 +225,7 @@ func main() {
 
 		msgs, err := s.ChannelMessages(m.ChannelID, 100, m.ID, "", "")
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 
 			return
 		}
@@ -235,7 +235,7 @@ func main() {
 	 	if arg != "" {
 			num, err = strconv.Atoi(arg)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 		}
 
@@ -257,7 +257,7 @@ func main() {
 		for _, dmsg := range dmsgs {
 			err = s.ChannelMessageDelete(m.ChannelID, dmsg)
 			if err != nil {
-				fmt.Println("ChannelMessageDelete: ", err)
+				log.Println("ChannelMessageDelete: ", err)
 			}
 		}
 
@@ -293,7 +293,7 @@ func main() {
 
 	dg.AddHandler(func (s *discordgo.Session, r *discordgo.Ready) {
 		cfg.botID = r.User.ID
-		fmt.Println("cfg.botID = ", r.User.ID)
+		log.Println("cfg.botID = ", r.User.ID)
 	})
 
 	dg.AddHandler(func (s *discordgo.Session, gc *discordgo.GuildCreate) {
@@ -337,12 +337,24 @@ func sendDeletable(s *discordgo.Session, ctx *discordgo.Message, content interfa
 		msg *discordgo.Message
 		err error
 	)
+	
+	ref := &discordgo.MessageReference{
+		MessageID: ctx.ID,
+		ChannelID: ctx.ChannelID,
+		GuildID:   ctx.GuildID,
+	}
 
 	switch c := content.(type) {
 	case string:
-		msg, err = s.ChannelMessageSend(ctx.ChannelID, c)
+		msg, err = s.ChannelMessageSendComplex(ctx.ChannelID, &discordgo.MessageSend{
+			Content:   c,
+			Reference: ref,
+		})
 	case *discordgo.MessageEmbed:
-		msg, err = s.ChannelMessageSendEmbed(ctx.ChannelID, c)
+		msg, err = s.ChannelMessageSendComplex(ctx.ChannelID, &discordgo.MessageSend{
+			Embed:   c,
+			Reference: ref,
+		})
 	default:
 		return
 	}
