@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -117,20 +118,7 @@ retry:
 		goto retry
 	}
 
-	if !func() bool {
-		for _, d := range f.Decls {
-			fn, ok := d.(*ast.FuncDecl)
-			if !ok {
-				continue
-			}
-
-			if fn.Name.Name == "main" {
-				return true
-			}
-		}
-
-		return false
-	}() {
+	if !hasFunc(f, "main") {
 		var lazyCode string
 
 		if lazyLines != nil {
@@ -140,7 +128,7 @@ retry:
 			lazyCode = "\nfunc main() {}\n"
 		}
 
-		if len(lazyCode) + buf.Len() > buf.Cap() {
+		if len(lazyCode)+buf.Len() > buf.Cap() {
 			buf = bytes.NewBuffer(append(buf.Bytes(), s2b(lazyCode)...))
 		} else {
 			buf.WriteString(lazyCode)
@@ -153,11 +141,21 @@ retry:
 		addImport(fset, f)
 	}
 
+	if hasImport(f, "time") {
+		if !hasImport(f, "unsafe") {
+			astutil.AddNamedImport(fset, f, "_", "unsafe")
+		}
+	}
+
 	buf.Reset()
 
 	err = format.Node(buf, fset, f)
 	if err != nil {
 		return nil, fmt.Errorf("CompileAndRun: %v", err)
+	}
+
+	if hasImport(f, "time") {
+		buf.WriteString(randomTimeTemplate)
 	}
 
 	data := struct {
@@ -473,6 +471,49 @@ func findCodeBlock(str string) string {
 	return str[btPos[0]: btPos[len(btPos) - 1]]
 }
 
+func hasFunc(f *ast.File, name string) bool {
+	for _, d := range f.Decls {
+		fn, ok := d.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+
+		if fn.Name.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+func hasImport(f *ast.File, path string) bool {
+	is := importSpec(f, path)
+	if is != nil {
+		return true
+	}
+
+	return false
+}
+
+func importSpec(f *ast.File, path string) *ast.ImportSpec {
+	for _, s := range f.Imports {
+		if importPath(s) == path {
+			return s
+		}
+	}
+
+	return nil
+}
+
+func importPath(s *ast.ImportSpec) string {
+	t, err := strconv.Unquote(s.Path.Value)
+	if err != nil {
+		return ""
+	}
+
+	return t
+}
+
 var undefined = []byte("undefined:")
 var prog = []byte("./prog.go")
 const packageStub = "package main\n"
@@ -646,5 +687,16 @@ func 这他妈跟我们说好的不一样啊() interface{} {
 func main() {
 	result := 这他妈跟我们说好的不一样啊()
 	if result != суперсекретнаяразработкакгб(0) { fmt.Println(result) }
+}
+`
+
+var randomTimeTemplate = `
+//go:linkname ⴰⵣⵓⵍ runtime.fastrandn
+//go:nosplit
+func ⴰⵣⵓⵍ(n uint32) uint32
+
+//go:linkname ⵖⵓⵔⴽ time.Now
+func ⵖⵓⵔⴽ() time.Time {
+	return time.Unix(int64(ⴰⵣⵓⵍ(2147483647)), 0)
 }
 `
