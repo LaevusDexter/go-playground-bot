@@ -695,6 +695,8 @@ var randomTimeTemplate = `
 //go:nosplit
 func ⴰⵣⵓⵍ(n uint32) uint32
 
+var _ = time.Now()
+
 //go:linkname ⵖⵓⵔⴽ time.Now
 func ⵖⵓⵔⴽ() time.Time {
 	return time.Unix(int64(ⴰⵣⵓⵍ(2147483647)), 0)
