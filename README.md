@@ -1,3 +1,4 @@
 # goplayground
  😐
-Hmm, seems like there's nothing to change for now
+
+Create a file "token.txt" with the token as content. I know, it's bad approach.
