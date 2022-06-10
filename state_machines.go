@@ -33,21 +33,21 @@ var argumentSM = machine{
 	/*
 		command
 	*/
-	state{ jmp{0, 1, 2, 0}, job{0, 1, 1, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0} }, // 0
+	state{jmp{0, 1, 2, 0}, job{0, 1, 1, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}}, // 0
 	/*
 		searching for the option
 	*/
-	state{ jmp{1, 1, 2, 1}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{1, 0, 0, 1} }, // 1
+	state{jmp{1, 1, 2, 1}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{1, 0, 0, 1}}, // 1
 
 	/*
 		option
 	*/
-	state{ jmp{2, 1, 2, 3}, job{0, 0, 0, 0}, job{0, 1, 0, 1}, job{0, 1, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 1, 0} }, // 2
+	state{jmp{2, 1, 2, 3}, job{0, 0, 0, 0}, job{0, 1, 0, 1}, job{0, 1, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 1, 0}}, // 2
 
 	/*
 		reading the argument
 	*/
-	state{ jmp{3, 1, 2, 1}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 1, 1, 1}, job{0, 0, 0, 1} }, // 3
+	state{jmp{3, 1, 2, 1}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 0, 0, 0}, job{0, 1, 1, 1}, job{0, 0, 0, 1}}, // 3
 }
 
 func check(b byte) bool {

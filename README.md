@@ -1,4 +1,4 @@
 # goplayground
  😐
 
-Create a file "token.txt" with the token as content. I know, it's bad approach.
+Discord token is read from the `DISCORD_TOKEN` environment variable
