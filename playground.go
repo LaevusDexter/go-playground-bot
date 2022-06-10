@@ -44,7 +44,7 @@ func PostToPlayground(src string) error {
 		return fmt.Errorf("PostToPlayground: %v", err)
 	}
 
-	return fmt.Errorf(`https://play.golang.org/p/%s`,  b2s(linkID))
+	return fmt.Errorf(`https://play.golang.org/p/%s`, b2s(linkID))
 }
 
 type Event struct {
@@ -286,7 +286,7 @@ func tryToFixErrors(err error, buf **bytes.Buffer, lazyLines *[]string, f *ast.F
 			fl := fset.File(fn.From)
 			pos := fset.Position(fn.From)
 			start := pos.Offset
-			if pos.Line  == fl.LineCount() {
+			if pos.Line == fl.LineCount() {
 				*lazyLines = append(*lazyLines, string(body[start:]))
 
 				body = body[:start]
@@ -296,10 +296,10 @@ func tryToFixErrors(err error, buf **bytes.Buffer, lazyLines *[]string, f *ast.F
 			}
 
 			end := fset.Position(fl.LineStart(pos.Line + 1)).Offset
-			*lazyLines = append(*lazyLines, string(body[start:end - len("\n")]))
+			*lazyLines = append(*lazyLines, string(body[start:end-len("\n")]))
 
 			n := copy(body[start:], body[end:])
-			body = body[:start + n]
+			body = body[:start+n]
 			*buf = bytes.NewBuffer(body)
 
 			break
@@ -419,10 +419,10 @@ try_ignore_catch:
 func findCodeBlock(str string) string {
 	buf := make([]byte, 0, 16)
 	isSingleLine := true
-	btPos :=  make([]int, 0, 2)
+	btPos := make([]int, 0, 2)
 
 	for i := 0; i < len(str); i++ {
-		buf = append(buf , str[i])
+		buf = append(buf, str[i])
 
 		switch b2s(buf) {
 		case "```golang":
@@ -436,12 +436,12 @@ func findCodeBlock(str string) string {
 		case "```g":
 		case "```":
 			if len(btPos) == 0 {
-				btPos = append(btPos, i + len("`"))
+				btPos = append(btPos, i+len("`"))
 
 				continue
 			}
 
-			btPos = append(btPos, i - len("``"))
+			btPos = append(btPos, i-len("``"))
 		case "``":
 			if isSingleLine {
 				isSingleLine = false
@@ -449,10 +449,10 @@ func findCodeBlock(str string) string {
 			}
 		case "`":
 			if isSingleLine {
-				btPos = append(btPos, i + len("`"))
+				btPos = append(btPos, i+len("`"))
 
 				if len(btPos) == 2 {
-					return str[btPos[0]: btPos[1] - len("`")]
+					return str[btPos[0] : btPos[1]-len("`")]
 				}
 			}
 		default:
@@ -468,7 +468,7 @@ func findCodeBlock(str string) string {
 		return str
 	}
 
-	return str[btPos[0]: btPos[len(btPos) - 1]]
+	return str[btPos[0]:btPos[len(btPos)-1]]
 }
 
 func hasFunc(f *ast.File, name string) bool {
@@ -516,6 +516,7 @@ func importPath(s *ast.ImportSpec) string {
 
 var undefined = []byte("undefined:")
 var prog = []byte("./prog.go")
+
 const packageStub = "package main\n"
 
 var stdImports = []string{

@@ -11,14 +11,14 @@ func catchPrefix(content string, prefix string, botID string) string {
 
 	for i := 0; i < len(content); i++ {
 		if within && content[i] == '>' && b2s(buf) == botID {
-			return strings.TrimSpace(content[i + 1:])
+			return strings.TrimSpace(content[i+1:])
 		}
 
 		buf = append(buf, content[i])
 
 		switch b2s(buf) {
 		case prefix:
-			return content[i + 1:]
+			return content[i+1:]
 		case "<@":
 			within = true
 			buf = buf[:0]
@@ -47,7 +47,7 @@ func parseCommand(content string, separators string, optionMarkers []string, ass
 		startValue int
 		cs         int
 
-		option string
+		option  string
 		command string
 
 		currentState byte

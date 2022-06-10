@@ -10,24 +10,24 @@ func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
 }
 
 func s2b(str string) (bs []byte) {
-     bsoff := unsafe.Offsetof(reflect.SliceHeader{}.Data)
-     stroff := unsafe.Offsetof(reflect.StringHeader{}.Data)
-     
-    *(*unsafe.Pointer)(add(unsafe.Pointer(&bs), bsoff)) = *(*unsafe.Pointer)(add(unsafe.Pointer(&str), stroff))
-    (*reflect.SliceHeader)(unsafe.Pointer(&bs)).Len = len(str)
-    (*reflect.SliceHeader)(unsafe.Pointer(&bs)).Cap = len(str)
-    
-    return
+	bsoff := unsafe.Offsetof(reflect.SliceHeader{}.Data)
+	stroff := unsafe.Offsetof(reflect.StringHeader{}.Data)
+
+	*(*unsafe.Pointer)(add(unsafe.Pointer(&bs), bsoff)) = *(*unsafe.Pointer)(add(unsafe.Pointer(&str), stroff))
+	(*reflect.SliceHeader)(unsafe.Pointer(&bs)).Len = len(str)
+	(*reflect.SliceHeader)(unsafe.Pointer(&bs)).Cap = len(str)
+
+	return
 }
 
 func b2s(bs []byte) (str string) {
 	stroff := unsafe.Offsetof(reflect.StringHeader{}.Data)
 	bsoff := unsafe.Offsetof(reflect.SliceHeader{}.Data)
-	
-   *(*unsafe.Pointer)(add(unsafe.Pointer(&str), stroff)) = *(*unsafe.Pointer)(add(unsafe.Pointer(&bs), bsoff))
-   (*reflect.StringHeader)(unsafe.Pointer(&str)).Len = len(bs)
-   
-   return
+
+	*(*unsafe.Pointer)(add(unsafe.Pointer(&str), stroff)) = *(*unsafe.Pointer)(add(unsafe.Pointer(&bs), bsoff))
+	(*reflect.StringHeader)(unsafe.Pointer(&str)).Len = len(bs)
+
+	return
 }
 
 func p2b(p unsafe.Pointer) (bs []byte) {
